@@ -1,17 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { LitElement, html, TemplateResult, css, CSSResultGroup } from 'lit';
+import { LitElement, html, TemplateResult, css } from 'lit';
 import { HomeAssistant, fireEvent, LovelaceCardEditor } from 'custom-card-helpers';
 
-import { ScopedRegistryHost } from '@lit-labs/scoped-registry-mixin';
 import { BoilerplateCardConfig } from './types';
-import { customElement, property, state } from 'lit/decorators';
-import { formfieldDefinition } from '../elements/formfield';
-import { selectDefinition } from '../elements/select';
-import { switchDefinition } from '../elements/switch';
-import { textfieldDefinition } from '../elements/textfield';
+import { customElement, property, state } from 'lit/decorators.js';
+import { PluginStyles } from './styles/styles';
 
 @customElement('boilerplate-card-editor')
-export class BoilerplateCardEditor extends ScopedRegistryHost(LitElement) implements LovelaceCardEditor {
+export class BoilerplateCardEditor extends LitElement implements LovelaceCardEditor {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: BoilerplateCardConfig;
@@ -19,13 +15,6 @@ export class BoilerplateCardEditor extends ScopedRegistryHost(LitElement) implem
   @state() private _helpers?: any;
 
   private _initialized = false;
-
-  static elementDefinitions = {
-    ...textfieldDefinition,
-    ...selectDefinition,
-    ...switchDefinition,
-    ...formfieldDefinition,
-  };
 
   public setConfig(config: BoilerplateCardConfig): void {
     this._config = config;
@@ -49,6 +38,10 @@ export class BoilerplateCardEditor extends ScopedRegistryHost(LitElement) implem
     return this._config?.entity || '';
   }
 
+  get _area(): string {
+    return this._config?.area || '';
+  }
+
   get _show_warning(): boolean {
     return this._config?.show_warning || false;
   }
@@ -66,39 +59,47 @@ export class BoilerplateCardEditor extends ScopedRegistryHost(LitElement) implem
     const entities = Object.keys(this.hass.states);
 
     return html`
-      <mwc-select
-        naturalMenuWidth
-        fixedMenuPosition
+      <ha-select
+        .hass=${this.hass}
         label="Entity (Required)"
-        .configValue=${'entity'}
         .value=${this._entity}
-        @selected=${this._valueChanged}
+        .configValue=${'entity'}
+        required="true"
+        @change=${this._valueChanged}
         @closed=${(ev) => ev.stopPropagation()}
       >
-        ${entities.map((entity) => {
-          return html`<mwc-list-item .value=${entity}>${entity}</mwc-list-item>`;
-        })}
-      </mwc-select>
-      <mwc-textfield
+        ${entities.map((entity) => html` <mwc-list-item .value=${entity}>${entity}</mwc-list-item> `)}
+      </ha-select>
+      <ha-area-picker
+        .curValue=${this._area}
+        no-add
+        .hass=${this.hass}
+        .value=${this._area}
+        .configValue=${'area'}
+        label="Area to display"
+        @value-changed=${this._valueChanged}
+      >
+      </ha-area-picker>
+      <ha-textfield
         label="Name (Optional)"
         .value=${this._name}
         .configValue=${'name'}
         @input=${this._valueChanged}
-      ></mwc-textfield>
-      <mwc-formfield .label=${`Toggle warning ${this._show_warning ? 'off' : 'on'}`}>
-        <mwc-switch
+      ></ha-textfield>
+      <ha-formfield .label=${`Toggle warning ${this._show_warning ? 'off' : 'on'}`}>
+        <ha-checkbox
           .checked=${this._show_warning !== false}
           .configValue=${'show_warning'}
           @change=${this._valueChanged}
-        ></mwc-switch>
-      </mwc-formfield>
-      <mwc-formfield .label=${`Toggle error ${this._show_error ? 'off' : 'on'}`}>
-        <mwc-switch
+        ></ha-checkbox>
+      </ha-formfield>
+      <ha-formfield .label=${`Toggle error ${this._show_error ? 'off' : 'on'}`}>
+        <ha-checkbox
           .checked=${this._show_error !== false}
           .configValue=${'show_error'}
           @change=${this._valueChanged}
-        ></mwc-switch>
-      </mwc-formfield>
+        ></ha-checkbox>
+      </ha-formfield>
     `;
   }
 
@@ -136,17 +137,23 @@ export class BoilerplateCardEditor extends ScopedRegistryHost(LitElement) implem
     fireEvent(this, 'config-changed', { config: this._config });
   }
 
-  static styles: CSSResultGroup = css`
-    mwc-select,
-    mwc-textfield {
-      margin-bottom: 16px;
-      display: block;
-    }
-    mwc-formfield {
-      padding-bottom: 8px;
-    }
-    mwc-switch {
-      --mdc-theme-secondary: var(--switch-checked-color);
-    }
-  `;
+  static get styles() {
+    return [
+      PluginStyles,
+      css`
+        ha-select,
+        mwc-select,
+        mwc-textfield {
+          margin-bottom: 16px;
+          display: block;
+        }
+        mwc-formfield {
+          padding-bottom: 8px;
+        }
+        mwc-switch {
+          --mdc-theme-secondary: var(--switch-checked-color);
+        }
+      `,
+    ];
+  }
 }
